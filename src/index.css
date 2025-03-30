@@ -1,0 +1,11 @@
+/* src/index.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 必要に応じてカスタムCSSを追記 */
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
