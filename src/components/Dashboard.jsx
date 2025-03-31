@@ -9,7 +9,6 @@ const Dashboard = () => {
   useEffect(() => {
     const storedTokens = JSON.parse(localStorage.getItem("tokens")) || [];
     const storedPortfolio = JSON.parse(localStorage.getItem("portfolio")) || {};
-
     setTokens(storedTokens);
     setPortfolio(storedPortfolio);
 
@@ -47,14 +46,15 @@ const Dashboard = () => {
             <tbody>
               {tokens.map((token) => {
                 const holdings = portfolio[token.symbol] || 0;
-                const value = (token.price * holdings).toFixed(2);
                 return (
                   <tr key={token.id} className="text-center">
                     <td className="border px-4 py-2">{token.tokenName}</td>
                     <td className="border px-4 py-2">{token.symbol}</td>
                     <td className="border px-4 py-2">${token.price}</td>
                     <td className="border px-4 py-2">{holdings}</td>
-                    <td className="border px-4 py-2">${value}</td>
+                    <td className="border px-4 py-2">
+                      ${(token.price * holdings).toFixed(2)}
+                    </td>
                   </tr>
                 );
               })}

@@ -19,8 +19,8 @@ const TokenDetail = () => {
   const [portfolio, setPortfolio] = useState({});
   const [quantity, setQuantity] = useState(1);
 
-  // ダミーのチャートデータ
-  const [chartData] = useState([
+  // 初期のダミーのチャートデータ
+  const [chartData, setChartData] = useState([
     { date: "2025-01-01", price: 1.0 },
     { date: "2025-01-02", price: 1.1 },
     { date: "2025-01-03", price: 0.9 },
@@ -28,6 +28,7 @@ const TokenDetail = () => {
     { date: "2025-01-05", price: 1.3 },
   ]);
 
+  // Token情報とPortfolio情報の読み込み
   useEffect(() => {
     const storedTokens = JSON.parse(localStorage.getItem("tokens")) || [];
     const storedPortfolio = JSON.parse(localStorage.getItem("portfolio")) || {};
@@ -37,15 +38,37 @@ const TokenDetail = () => {
     setPortfolio(storedPortfolio);
   }, [symbol]);
 
+  // チャートデータをリアルタイム更新する
+  useEffect(() => {
+    // 毎回新しい価格を計算する関数（±10% のランダム変動）
+    const updatePrice = () => {
+      setChartData((prevData) => {
+        // 最新の価格を取得
+        const lastData = prevData[prevData.length - 1];
+        // 価格変動率： -0.1〜+0.1 (10%の範囲)
+        const fluctuation = (Math.random() * 0.2 - 0.1).toFixed(2);
+        const newPrice = Math.max(0.1, lastData.price * (1 + parseFloat(fluctuation)));
+        // 新しい日付（ここでは単純に次の日付を示すために固定文字列を付与）
+        const newDate = new Date().toLocaleDateString();
+        // 古いデータは削除して最新5件だけ保持
+        const newData = [...prevData.slice(-4), { date: newDate, price: newPrice }];
+        return newData;
+      });
+    };
+
+    // 5秒ごとに価格更新
+    const intervalId = setInterval(updatePrice, 5000);
+
+    return () => clearInterval(intervalId); // コンポーネントアンマウント時にクリーンアップ
+  }, []);
+
   const handleBuy = () => {
     if (!token) return;
     const currentAmount = portfolio[symbol] || 0;
     const newAmount = currentAmount + parseInt(quantity, 10);
-
     const updatedPortfolio = { ...portfolio, [symbol]: newAmount };
     setPortfolio(updatedPortfolio);
     localStorage.setItem("portfolio", JSON.stringify(updatedPortfolio));
-
     alert(`Bought ${quantity} ${symbol} tokens!`);
   };
 
@@ -53,17 +76,14 @@ const TokenDetail = () => {
     if (!token) return;
     const currentAmount = portfolio[symbol] || 0;
     const sellQty = parseInt(quantity, 10);
-
     if (sellQty > currentAmount) {
       alert("You don't have enough tokens to sell.");
       return;
     }
-
     const newAmount = currentAmount - sellQty;
     const updatedPortfolio = { ...portfolio, [symbol]: newAmount };
     setPortfolio(updatedPortfolio);
     localStorage.setItem("portfolio", JSON.stringify(updatedPortfolio));
-
     alert(`Sold ${quantity} ${symbol} tokens!`);
   };
 
@@ -112,9 +132,7 @@ const TokenDetail = () => {
 
       {/* 買い/売りフォーム */}
       <div className="bg-white p-6 rounded shadow max-w-md">
-        <label className="block text-gray-700 font-semibold mb-1">
-          Quantity:
-        </label>
+        <label className="block text-gray-700 font-semibold mb-1">Quantity:</label>
         <input
           type="number"
           className="border border-gray-300 rounded px-3 py-2 w-full mb-4"
