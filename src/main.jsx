@@ -1,12 +1,16 @@
-// src/main.jsx
-
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import "./index.css"; // TailwindやグローバルCSSを読み込むならこのまま使います
+import { AuthProvider } from "./AuthContext";
+import { AthlxPriceProvider } from "./AthlxPriceContext";
+import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <AthlxPriceProvider>
+        <App />
+      </AthlxPriceProvider>
+    </AuthProvider>
   </React.StrictMode>
 );

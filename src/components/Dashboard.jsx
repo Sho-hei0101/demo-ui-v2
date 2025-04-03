@@ -1,4 +1,3 @@
-// src/components/Dashboard.jsx
 import React, { useEffect, useState } from "react";
 
 const Dashboard = () => {
@@ -11,7 +10,6 @@ const Dashboard = () => {
     const storedPortfolio = JSON.parse(localStorage.getItem("portfolio")) || {};
     setTokens(storedTokens);
     setPortfolio(storedPortfolio);
-
     let total = 0;
     storedTokens.forEach((token) => {
       const holdings = storedPortfolio[token.symbol] || 0;
@@ -52,9 +50,7 @@ const Dashboard = () => {
                     <td className="border px-4 py-2">{token.symbol}</td>
                     <td className="border px-4 py-2">${token.price}</td>
                     <td className="border px-4 py-2">{holdings}</td>
-                    <td className="border px-4 py-2">
-                      ${(token.price * holdings).toFixed(2)}
-                    </td>
+                    <td className="border px-4 py-2">${(token.price * holdings).toFixed(2)}</td>
                   </tr>
                 );
               })}

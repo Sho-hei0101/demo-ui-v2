@@ -1,4 +1,3 @@
-// src/components/ReviewProfiles.jsx
 import React, { useEffect, useState } from "react";
 
 const ReviewProfiles = () => {

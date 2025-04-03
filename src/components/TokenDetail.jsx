@@ -1,4 +1,3 @@
-// src/components/TokenDetail.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -10,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import TransactionHistory from "./TransactionHistory";
 
 const TokenDetail = () => {
   const { symbol } = useParams();
@@ -18,8 +18,8 @@ const TokenDetail = () => {
   const [token, setToken] = useState(null);
   const [portfolio, setPortfolio] = useState({});
   const [quantity, setQuantity] = useState(1);
+  const [transactions, setTransactions] = useState([]);
 
-  // 初期のダミーのチャートデータ
   const [chartData, setChartData] = useState([
     { date: "2025-01-01", price: 1.0 },
     { date: "2025-01-02", price: 1.1 },
@@ -28,72 +28,91 @@ const TokenDetail = () => {
     { date: "2025-01-05", price: 1.3 },
   ]);
 
-  // Token情報とPortfolio情報の読み込み
   useEffect(() => {
     const storedTokens = JSON.parse(localStorage.getItem("tokens")) || [];
     const storedPortfolio = JSON.parse(localStorage.getItem("portfolio")) || {};
+    const storedTransactions = JSON.parse(localStorage.getItem("transactions")) || [];
 
     const foundToken = storedTokens.find((t) => t.symbol === symbol);
     setToken(foundToken || null);
     setPortfolio(storedPortfolio);
+    setTransactions(storedTransactions.filter((tx) => tx.tokenSymbol === symbol));
   }, [symbol]);
 
-  // チャートデータをリアルタイム更新する
+  const updateTransactions = (newTx) => {
+    const storedTx = JSON.parse(localStorage.getItem("transactions")) || [];
+    const updated = [...storedTx, newTx];
+    localStorage.setItem("transactions", JSON.stringify(updated));
+    setTransactions((prev) => [...prev, newTx]);
+  };
+
   useEffect(() => {
-    // 毎回新しい価格を計算する関数（±10% のランダム変動）
-    const updatePrice = () => {
+    const intervalId = setInterval(() => {
       setChartData((prevData) => {
-        // 最新の価格を取得
-        const lastData = prevData[prevData.length - 1];
-        // 価格変動率： -0.1〜+0.1 (10%の範囲)
-        const fluctuation = (Math.random() * 0.2 - 0.1).toFixed(2);
-        const newPrice = Math.max(0.1, lastData.price * (1 + parseFloat(fluctuation)));
-        // 新しい日付（ここでは単純に次の日付を示すために固定文字列を付与）
+        const lastEntry = prevData[prevData.length - 1];
+        const fluctuation = Math.random() * 0.2 - 0.1;
+        const newPrice = Math.max(0.1, lastEntry.price * (1 + fluctuation));
         const newDate = new Date().toLocaleDateString();
-        // 古いデータは削除して最新5件だけ保持
-        const newData = [...prevData.slice(-4), { date: newDate, price: newPrice }];
+        const newData = [...prevData.slice(-4), { date: newDate, price: parseFloat(newPrice.toFixed(2)) }];
         return newData;
       });
-    };
-
-    // 5秒ごとに価格更新
-    const intervalId = setInterval(updatePrice, 5000);
-
-    return () => clearInterval(intervalId); // コンポーネントアンマウント時にクリーンアップ
+    }, 5000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleBuy = () => {
     if (!token) return;
     const currentAmount = portfolio[symbol] || 0;
-    const newAmount = currentAmount + parseInt(quantity, 10);
+    const qty = parseInt(quantity, 10);
+    const newAmount = currentAmount + qty;
     const updatedPortfolio = { ...portfolio, [symbol]: newAmount };
     setPortfolio(updatedPortfolio);
     localStorage.setItem("portfolio", JSON.stringify(updatedPortfolio));
-    alert(`Bought ${quantity} ${symbol} tokens!`);
+
+    const newTx = {
+      id: Date.now(),
+      tokenSymbol: symbol,
+      type: "buy",
+      quantity: qty,
+      price: token.price,
+      date: new Date().toLocaleString(),
+    };
+    updateTransactions(newTx);
+    alert(`Bought ${qty} ${symbol} tokens!`);
   };
 
   const handleSell = () => {
     if (!token) return;
     const currentAmount = portfolio[symbol] || 0;
-    const sellQty = parseInt(quantity, 10);
-    if (sellQty > currentAmount) {
+    const qty = parseInt(quantity, 10);
+    if (qty > currentAmount) {
       alert("You don't have enough tokens to sell.");
       return;
     }
-    const newAmount = currentAmount - sellQty;
+    const newAmount = currentAmount - qty;
     const updatedPortfolio = { ...portfolio, [symbol]: newAmount };
     setPortfolio(updatedPortfolio);
     localStorage.setItem("portfolio", JSON.stringify(updatedPortfolio));
-    alert(`Sold ${quantity} ${symbol} tokens!`);
+
+    const newTx = {
+      id: Date.now(),
+      tokenSymbol: symbol,
+      type: "sell",
+      quantity: qty,
+      price: token.price,
+      date: new Date().toLocaleString(),
+    };
+    updateTransactions(newTx);
+    alert(`Sold ${qty} ${symbol} tokens!`);
   };
 
-  if (token === null) {
+  if (!token) {
     return (
       <div className="min-h-screen bg-gray-100 p-8">
         <p className="text-gray-600 mb-4">Token not found.</p>
         <button
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/market")}
         >
           Back to Market
         </button>
@@ -106,8 +125,6 @@ const TokenDetail = () => {
       <h1 className="text-3xl font-bold text-blue-600 mb-4">
         {token.tokenName} ({token.symbol})
       </h1>
-
-      {/* トークン基本情報 */}
       <div className="bg-white p-6 rounded shadow mb-6">
         <p className="text-gray-700 mb-2">Price: ${token.price}</p>
         <p className="text-gray-700 mb-2">Supply: {token.supply}</p>
@@ -115,8 +132,6 @@ const TokenDetail = () => {
           Your Holdings: {portfolio[symbol] || 0} tokens
         </p>
       </div>
-
-      {/* チャート表示 */}
       <div className="bg-white p-6 rounded shadow mb-6">
         <h2 className="text-xl font-semibold mb-4">Price History</h2>
         <ResponsiveContainer width="100%" height={300}>
@@ -129,10 +144,10 @@ const TokenDetail = () => {
           </LineChart>
         </ResponsiveContainer>
       </div>
-
-      {/* 買い/売りフォーム */}
-      <div className="bg-white p-6 rounded shadow max-w-md">
-        <label className="block text-gray-700 font-semibold mb-1">Quantity:</label>
+      <div className="bg-white p-6 rounded shadow max-w-md mb-6">
+        <label className="block text-gray-700 font-semibold mb-1">
+          Quantity:
+        </label>
         <input
           type="number"
           className="border border-gray-300 rounded px-3 py-2 w-full mb-4"
@@ -154,6 +169,14 @@ const TokenDetail = () => {
             Sell
           </button>
         </div>
+      </div>
+      <div className="bg-white p-6 rounded shadow">
+        <h2 className="text-xl font-semibold mb-4">Transaction History</h2>
+        {transactions.length === 0 ? (
+          <p className="text-gray-600">No transactions yet.</p>
+        ) : (
+          <TransactionHistory transactions={transactions} />
+        )}
       </div>
     </div>
   );
